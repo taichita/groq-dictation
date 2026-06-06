@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Groq Dictation 使い方</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg:#fafaf8; --surface:#fff; --fg:#18181b; --fg-muted:#71717a; --fg-subtle:#a1a1aa;
+    --border:#eceae5; --border-strong:#d4d2cc; --accent:oklch(0.52 0.22 290);
+    --accent-soft:oklch(0.96 0.03 290); --ok:oklch(0.55 0.13 155); --code-bg:#f5f4f0;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+    --font-mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);font-size:15px;line-height:1.85;-webkit-font-smoothing:antialiased;font-feature-settings:"palt" 1;}
+  main{max-width:720px;margin:0 auto;padding:40px 24px 96px;display:flex;flex-direction:column;gap:26px;}
+  .verdict{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:34px;border-left:4px solid var(--accent);}
+  .verdict .kicker{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.12em;margin:0 0 12px;}
+  .verdict h1{font-size:29px;line-height:1.4;font-weight:700;margin:0;letter-spacing:-.01em;}
+  .verdict .sub{font-size:15px;color:var(--fg-muted);margin:14px 0 0;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px 26px;}
+  .card-num{font-size:11px;font-weight:700;color:var(--fg-subtle);letter-spacing:.16em;margin:0 0 6px;}
+  .card h2{font-size:19px;font-weight:600;margin:0 0 14px;}
+  ol.steps{list-style:none;counter-reset:s;padding:0;margin:0;display:flex;flex-direction:column;gap:16px;}
+  ol.steps>li{counter-increment:s;display:flex;gap:13px;align-items:flex-start;}
+  ol.steps>li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:999px;background:var(--accent);color:#fff;font-size:13px;font-weight:700;line-height:26px;text-align:center;}
+  .st-title{font-weight:600;}
+  .st-body{font-size:14px;color:var(--fg-muted);margin-top:2px;}
+  .file{display:inline-block;font-family:var(--font-mono);font-size:.84em;background:var(--code-bg);border:1px solid var(--border);padding:1px 7px;border-radius:5px;font-weight:600;color:var(--accent);}
+  kbd{font-family:var(--font-mono);font-size:.82em;background:#fff;border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:5px;padding:1px 7px;}
+  .note{font-size:13px;color:var(--fg-muted);background:var(--accent-soft);border-radius:8px;padding:13px 15px;margin-top:14px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:4px;}
+  td,th{text-align:left;padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{font-size:11px;color:var(--fg-subtle);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .foot{text-align:center;font-size:12px;color:var(--fg-subtle);margin-top:6px;}
+</style>
+</head>
+<body>
+<main>
+  <section class="verdict">
+    <p class="kicker">Groq Dictation 使い方</p>
+    <h1>話すだけで、AIチャット欄に文字が入る音声入力ツールです。最初に1回だけ準備すれば、あとはホットキーで使えます。</h1>
+    <p class="sub">準備に必要なのは「Python（無料）」と「自分のGroq APIキー（無料登録）」だけ。下の順に進めてください。</p>
+  </section>
+
+  <section class="card">
+    <p class="card-num">STEP 01</p>
+    <h2>準備（最初の1回だけ）</h2>
+    <ol class="steps">
+      <li><div><div class="st-title">このフォルダを分かりやすい場所に置く</div><div class="st-body">例: 「書類」フォルダの中など。</div></div></li>
+      <li><div><div class="st-title"><span class="file">はじめに.command</span> を右クリック →「開く」</div><div class="st-body">初回だけ「開発元を確認できません」と出ます。<strong>右クリックして「開く」</strong>→「開く」を押せば進めます（普通のダブルクリックだと開けません）。</div></div></li>
+      <li><div><div class="st-title">画面の案内に従う</div><div class="st-body">自動で部品を準備します（数分）。途中で<strong>Groqのキーを聞かれたら貼り付け</strong>、<strong>マイクは「許可」</strong>、<strong>アクセシビリティは「ターミナル」をオン</strong>にしてください。</div></div></li>
+    </ol>
+    <div class="note">Python が入っていない場合は、案内のページからインストールして、もう一度 <span class="file">はじめに.command</span> を開いてください。</div>
+  </section>
+
+  <section class="card">
+    <p class="card-num">STEP 02</p>
+    <h2>Groq APIキーの取り方（持っていない場合）</h2>
+    <ol class="steps">
+      <li><div><div class="st-title">ブラウザで console.groq.com/keys を開く</div><div class="st-body">Googleアカウント等でログインできます（無料）。</div></div></li>
+      <li><div><div class="st-title">「Create API Key」を押す</div><div class="st-body"><kbd>gsk_</kbd> で始まる文字列が出ます。</div></div></li>
+      <li><div><div class="st-title">その文字列をコピーして、準備中のダイアログに貼り付け</div><div class="st-body">キーは自分のMacの中だけに保存され、他の人には渡りません。料金は自分のアカウント単位（音声1時間あたり約$0.04ととても安価）。</div></div></li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <p class="card-num">STEP 03</p>
+    <h2>毎日の使い方</h2>
+    <table>
+      <tr><th>操作</th><th>動き</th></tr>
+      <tr><td><span class="file">起動.command</span> をダブルクリック</td><td>音声入力を待機（黒い画面が出ます。閉じると止まります）</td></tr>
+      <tr><td>AIチャットの入力欄をクリック</td><td>そこに文字が入ります</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td>録音開始（音が鳴る）→ 話す</td></tr>
+      <tr><td>もう一度 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td>録音停止 → 文字起こし → 入力欄へ自動で貼り付け</td></tr>
+    </table>
+    <div class="note">キーを変えたいときは <span class="file">キー設定.command</span>、うまく動かないときは <span class="file">確認.command</span> でテストできます。困ったら配布元（窪田）に連絡してください。</div>
+  </section>
+
+  <p class="foot">Groq Dictation ・ 社内配布版</p>
+</main>
+</body>
+</html>

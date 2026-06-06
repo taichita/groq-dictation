@@ -1,0 +1,15 @@
+# 実行時・マシン固有（同期しない）
+.env
+.venv/
+__pycache__/
+*.pyc
+*.wav
+*.log
+DEBUG_KEYS
+keydiag.log
+last_check.log
+GroqDictation_配布版.zip
+
+# 個人的な発話内容・ユーザー設定（公開しない）
+音声入力ログ/
+config.env
