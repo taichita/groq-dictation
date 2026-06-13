@@ -75,3 +75,50 @@ class AudioRecorder:
             raise ValueError("録音データが空です。")
         audio_int16 = np.int16(np.clip(audio_data, -1.0, 1.0) * 32767)
         write(path, self.sample_rate, audio_int16)
+
+    def split_chunks(
+        self,
+        audio: np.ndarray,
+        chunk_sec: float,
+        search_sec: float = 4.0,
+    ) -> list[np.ndarray]:
+        """長い録音を、Groq の1リクエスト上限に収まる長さへ分割する。
+
+        各境界の近くで最も音が静かな箇所（＝話の「間」）を選んで切るので、
+        単語の途中で切れにくい。chunk_sec<=0 や十分短い場合は分割せず1個で返す。
+        """
+        if audio is None or audio.size == 0:
+            return [audio]
+        sr = self.sample_rate
+        n = len(audio)
+        chunk = int(chunk_sec * sr)
+        if chunk <= 0 or n <= chunk:
+            return [audio]
+
+        win = max(1, int(0.1 * sr))            # 静けさ判定の窓: 100ms
+        search = max(win, int(search_sec * sr))
+        chunks: list[np.ndarray] = []
+        start = 0
+        while start < n:
+            target = start + chunk
+            if target >= n:
+                chunks.append(audio[start:])
+                break
+            lo = max(start + chunk // 2, target - search)
+            hi = min(n, target + search)
+            split = self._quietest_index(audio, lo, hi, win)
+            if split <= start:
+                split = target            # 念のための前進保証（無限ループ防止）
+            chunks.append(audio[start:split])
+            start = split
+        return chunks
+
+    def _quietest_index(self, audio: np.ndarray, lo: int, hi: int, win: int) -> int:
+        """[lo, hi) の中で最も静か（振幅が小さい）な窓の中心インデックスを返す。"""
+        seg = np.abs(audio[lo:hi]).astype(np.float32).reshape(-1)
+        if seg.size <= win:
+            return (lo + hi) // 2
+        csum = np.cumsum(seg)
+        window_sums = csum[win:] - csum[:-win]   # 各位置から win サンプル分の振幅和
+        idx = int(np.argmin(window_sums))        # 最も静かな窓の開始位置（seg内）
+        return lo + idx + win // 2

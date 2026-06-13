@@ -13,3 +13,4 @@ GroqDictation_配布版.zip
 # 個人的な発話内容・ユーザー設定（公開しない）
 音声入力ログ/
 config.env
+replacement.local.json

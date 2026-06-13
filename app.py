@@ -136,15 +136,20 @@ class GroqDictationApp:
         self.is_recording = True
         self._set_state("recording")
         sound_cue.play("start")
-        logger.info("🔴 録音開始（もう一度ホットキーで停止 / 最大 %.0f 秒で自動停止）",
-                    self.config.max_record_sec)
 
-        # 長すぎる録音の自動停止タイマー
-        self._auto_stop_timer = threading.Timer(
-            self.config.max_record_sec, self._auto_stop
-        )
-        self._auto_stop_timer.daemon = True
-        self._auto_stop_timer.start()
+        # MAX_RECORD_SEC=0（既定）なら自動停止せず長さ無制限。
+        # 長い録音は送信時に自動分割するので、巨大ファイルで失敗する心配はない。
+        if self.config.max_record_sec and self.config.max_record_sec > 0:
+            logger.info("🔴 録音開始（もう一度ホットキーで停止 / 最大 %.0f 秒で自動停止）",
+                        self.config.max_record_sec)
+            self._auto_stop_timer = threading.Timer(
+                self.config.max_record_sec, self._auto_stop
+            )
+            self._auto_stop_timer.daemon = True
+            self._auto_stop_timer.start()
+        else:
+            self._auto_stop_timer = None
+            logger.info("🔴 録音開始（もう一度ホットキーで停止 / 自動停止なし＝長さ無制限）")
 
     def _auto_stop(self) -> None:
         try:
@@ -182,10 +187,7 @@ class GroqDictationApp:
                 sound_cue.play("error")
                 return
 
-            self.recorder.save_wav(audio_path, audio_data)
-            logger.info("📤 Groqへ送信中（%.1f秒の音声）...", duration)
-
-            raw_text = self.client.transcribe(audio_path, language=self.config.language)
+            raw_text = self._transcribe_audio(audio_data, duration)
             text = self.replacer.apply(raw_text)
 
             if not text.strip():
@@ -225,6 +227,53 @@ class GroqDictationApp:
             with self._lock:
                 self.is_processing = False
             self._set_state("idle")
+
+    # ----- 文字起こし（長い録音は自動分割して送信） -----
+    def _transcribe_audio(self, audio_data, duration: float) -> str:
+        """録音データを文字起こしして返す。
+
+        Groq の1リクエストには上限（おおよそ13分相当のファイルサイズ）があるため、
+        長い録音は CHUNK_SEC ごとに「間」で自動分割して順番に送り、結果をつなげる。
+        一部の送信が失敗しても、成功した分はつなげて返す（全消えを防ぐ）。
+        """
+        chunks = self.recorder.split_chunks(audio_data, self.config.chunk_sec)
+        total = len(chunks)
+        if total <= 1:
+            logger.info("📤 Groqへ送信中（%.1f秒の音声）...", duration)
+        else:
+            logger.info(
+                "📤 長い音声（%.0f秒）を %d 個に分割して送信します...", duration, total
+            )
+
+        parts: list[str] = []
+        failures = 0
+        for i, chunk in enumerate(chunks, start=1):
+            path = None
+            try:
+                fd, path = tempfile.mkstemp(suffix=".wav")
+                os.close(fd)
+                self.recorder.save_wav(path, chunk)
+                if total > 1:
+                    logger.info("  → 送信中 %d/%d ...", i, total)
+                part = self.client.transcribe(path, language=self.config.language)
+                parts.append(part.strip())
+            except TranscriptionError as e:
+                failures += 1
+                logger.error("  ✗ %d/%d の送信に失敗（この部分はスキップ）: %s", i, total, e)
+            finally:
+                if path and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
+
+        if total > 1 and failures:
+            logger.warning(
+                "⚠ %d/%d 個の送信に失敗しました（成功した分だけ貼り付けます）", failures, total
+            )
+        if total and failures == total:
+            raise TranscriptionError("すべての分割送信に失敗しました。")
+        return "".join(parts)
 
     # ----- 後始末 -----
     def _cleanup_temp(self) -> None:

@@ -112,7 +112,8 @@ class AppConfig:
     sample_rate: int          # 録音サンプリングレート（Hz）
     channels: int             # 録音チャンネル数（1=モノラル）
     min_record_sec: float     # これより短い録音は無視（誤爆/空録音対策）
-    max_record_sec: float     # これを超えたら自動停止（413/巨大ファイル対策）
+    max_record_sec: float     # これを超えたら自動停止（0=無制限）
+    chunk_sec: float          # 長い録音をこの秒数ごとに分割して送る（413回避）
     request_timeout: int      # Groq API のタイムアウト秒
     max_retries: int          # タイムアウト/5xx 時のリトライ回数
     sound_cue: bool           # 録音開始/停止のビープ音
@@ -153,7 +154,8 @@ class AppConfig:
             sample_rate=int(_get_float("SAMPLE_RATE", 16000)),
             channels=int(_get_float("CHANNELS", 1)),
             min_record_sec=_get_float("MIN_RECORD_SEC", 0.4),
-            max_record_sec=_get_float("MAX_RECORD_SEC", 120.0),
+            max_record_sec=_get_float("MAX_RECORD_SEC", 0.0),
+            chunk_sec=_get_float("CHUNK_SEC", 180.0),
             request_timeout=int(_get_float("REQUEST_TIMEOUT", 60)),
             max_retries=int(_get_float("MAX_RETRIES", 2)),
             sound_cue=_get_bool("SOUND_CUE", False),
